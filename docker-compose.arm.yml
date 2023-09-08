@@ -1,0 +1,61 @@
+version: "3.8"
+
+services:
+    pizzaapp.frontend:
+        user: "1000:50"
+        container_name: pizzaapp.frontend
+        ports:
+            - "8080:8080"
+        image: node:14-alpine
+        volumes:
+            - ./:/var/www/app:cached
+        command: /bin/sh -c "yarn && yarn watch"
+        working_dir: "/var/www/app"
+        depends_on:
+            - pizzaapp.nginx
+    #    restart: always
+
+    pizzaapp.nginx:
+        container_name: pizzaapp.nginx
+        ports:
+            - "8001:8001"
+        image: nginx:stable-alpine
+        volumes:
+            - ./:/app
+            - ./docker/nginx:/etc/nginx/conf.d
+        depends_on:
+            - pizzaapp.php
+
+    pizzaapp.php:
+        container_name: pizzaapp.php
+        build: docker/php
+        volumes:
+            - ./:/app
+        depends_on:
+            - pizzaapp.db
+        restart: unless-stopped
+
+    pizzaapp.db:
+        image: mariadb:latest
+        container_name: pizzaapp.db
+        ports:
+            - "3311:3306"
+        command: --default-authentication-plugin=mysql_native_password
+        restart: always
+        env_file:
+            - .env
+        environment:
+            - MYSQL_USER=${DB_USERNAME}
+            - MYSQL_DATABASE=${DB_DATABASE}
+            - MYSQL_PASSWORD=${DB_PASSWORD}
+            - MYSQL_ROOT_USER=${DB_ROOT_USER}
+        volumes:
+            - pizzaapp.db.mysql:/var/lib/mysql
+            # Запустить после первого запуска (внутри этого контейнера)
+            - ./docker/mysql/mysql_init.sh:/docker-entrypoint-initdb.d/init.sh
+            - "./docker/mysql/logs/mysql:/var/log/mysql"
+            - "./docker/mysql/etc/mysql/mysql.cnf:/etc/mysql/conf.d/mysql.cnf"
+            - "./docker/mysql/etc/mysql/mysqld.cnf:/etc/mysql/mysql.conf.d/mysqld.cnf"
+
+volumes:
+    pizzaapp.mysql:

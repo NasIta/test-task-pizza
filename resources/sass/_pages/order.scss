@@ -1,0 +1,10 @@
+.order {
+    &_form {
+        display: flex;
+        flex-flow: column;
+    }
+
+    &_form-item {
+        margin-bottom: 16px;
+    }
+}
